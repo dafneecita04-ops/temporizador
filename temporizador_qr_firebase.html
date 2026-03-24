@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Temporizador QR Firebase</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: #101a2f;
+      --panel-2: #17233d;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #ef4444;
+      --accent-2: #f59e0b;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --line: rgba(255,255,255,0.09);
+      --shadow: rgba(0,0,0,0.34);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #1f2937 0%, #08111f 55%, #030712 100%);
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.12);
+      color: #fecaca;
+      font-size: 0.92rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 22px;
+    }
+
+    .card {
+      background: rgba(16, 26, 47, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 18px 48px var(--shadow);
+      padding: 20px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.08rem;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+      margin-top: 8px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.16s ease, opacity 0.2s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-primary { background: #3b82f6; }
+    .btn-accent { background: #8b5cf6; }
+    .btn-success { background: var(--ok); }
+    .btn-warn { background: var(--warn); color: #111827; }
+    .btn-danger { background: var(--danger); }
+    .btn-neutral { background: #64748b; }
+
+    .status-pill, code {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #070c18;
+      border: 1px solid var(--line);
+      color: #cbd5e1;
+      word-break: break-all;
+      font-size: 0.86rem;
+    }
+
+    .timer-shell {
+      display: grid;
+      gap: 18px;
+      align-items: center;
+      justify-items: center;
+      min-height: 540px;
+      position: relative;
+    }
+
+    .timer-ring {
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background:
+        conic-gradient(var(--accent) var(--progress, 100%), rgba(255,255,255,0.08) 0);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 28px rgba(0,0,0,0.28), 0 0 28px rgba(239,68,68,0.12);
+      transition: background 0.4s linear, box-shadow 0.4s ease;
+      position: relative;
+    }
+
+    .timer-ring.bomb-warn {
+      box-shadow: inset 0 0 28px rgba(0,0,0,0.28), 0 0 36px rgba(245,158,11,0.26);
+    }
+
+    .timer-ring.bomb-danger {
+      box-shadow: inset 0 0 28px rgba(0,0,0,0.28), 0 0 42px rgba(239,68,68,0.34);
+      animation: pulseDanger 1s infinite;
+    }
+
+    @keyframes pulseDanger {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.015); }
+    }
+
+    .fuse {
+      position: absolute;
+      top: -24px;
+      width: 120px;
+      height: 44px;
+      border-top: 4px dashed #fbbf24;
+      border-radius: 50%;
+      transform: rotate(-10deg);
+      opacity: 0.9;
+    }
+
+    .spark {
+      position: absolute;
+      top: -28px;
+      right: 114px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fde68a 0%, #f59e0b 45%, rgba(245,158,11,0) 70%);
+      box-shadow: 0 0 16px rgba(245,158,11,0.9);
+      animation: spark 0.7s infinite;
+    }
+
+    @keyframes spark {
+      0%, 100% { transform: scale(0.8) translateY(0); opacity: 0.8; }
+      50% { transform: scale(1.15) translateY(-2px); opacity: 1; }
+    }
+
+    .timer-core {
+      width: 286px;
+      height: 286px;
+      border-radius: 50%;
+      background: radial-gradient(circle at top, #30161b, #0d162a 74%);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timer-core::after {
+      content: '';
+      position: absolute;
+      inset: 16px;
+      border: 1px dashed rgba(255,255,255,0.07);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .time {
+      font-size: 3.8rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      line-height: 1;
+      margin-bottom: 10px;
+      text-shadow: 0 0 18px rgba(239,68,68,0.22);
+    }
+
+    .time.warn { color: #fde68a; }
+    .time.danger { color: #fca5a5; }
+    .time.done { color: #bbf7d0; }
+
+    .state {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .info-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .info-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .info-box .label {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 8px;
+    }
+
+    .info-box .value {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .player-mode .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .player-mode #hostPanel,
+    .player-mode #linksPanel {
+      display: none !important;
+    }
+
+    .player-mode .wrap {
+      max-width: 920px;
+    }
+
+    .player-mode .subtitle {
+      text-align: center;
+    }
+
+    .finish-banner {
+      display: none;
+      width: 100%;
+      padding: 16px;
+      border-radius: 18px;
+      text-align: center;
+      font-weight: bold;
+      background: rgba(34,197,94,0.12);
+      border: 1px solid rgba(34,197,94,0.28);
+      color: #bbf7d0;
+    }
+
+    .show { display: block; }
+
+    .dramatic-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, rgba(127,29,29,0.28) 0%, rgba(3,7,18,0.92) 60%, rgba(3,7,18,0.98) 100%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    .dramatic-overlay.show {
+      display: flex;
+    }
+
+    .dramatic-card {
+      width: min(620px, 100%);
+      background: linear-gradient(180deg, rgba(48,22,27,0.95), rgba(10,15,28,0.98));
+      border: 1px solid rgba(252,165,165,0.16);
+      border-radius: 28px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    }
+
+    .dramatic-card h2 {
+      font-size: 2.2rem;
+      margin: 0 0 12px;
+      color: #fecaca;
+    }
+
+    .dramatic-card p {
+      color: #e5e7eb;
+      line-height: 1.6;
+      margin-bottom: 22px;
+    }
+
+    .dramatic-code {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      color: #fde68a;
+      font-size: 1.05rem;
+    }
+
+    .qr-box {
+      margin-top: 14px;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    .qr-box img {
+      width: 220px;
+      height: 220px;
+      background: white;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .timer-ring {
+        width: 310px;
+        height: 310px;
+      }
+      .timer-core {
+        width: 236px;
+        height: 236px;
+      }
+      .time {
+        font-size: 2.9rem;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      .qr-box img {
+        width: 190px;
+        height: 190px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="pill" id="modePill">Modo anfitrión</div>
+    <h1>Temporizador QR · 1 hora</h1>
+    <div class="subtitle" id="subtitleText">Crea una sala, genera un enlace para QR y cuando alguien lo abra por primera vez se activará el temporizador de 60 minutos para todos los dispositivos conectados.</div>
+
+    <div class="layout">
+      <div>
+        <div class="card" id="hostPanel">
+          <h2>Sala y control</h2>
+
+          <label for="roomInput">ID de sala</label>
+          <input id="roomInput" type="text" placeholder="Ejemplo: CUENTAATRAS01" />
+
+          <div class="buttons">
+            <button class="btn-primary" id="createRoomBtn">Crear sala</button>
+            <button class="btn-neutral" id="connectRoomBtn">Conectar</button>
+          </div>
+
+          <div class="status-pill" id="roomStatus">Sin sala conectada</div>
+
+          <label for="durationInput">Duración en minutos</label>
+          <input id="durationInput" type="number" min="1" value="60" />
+          <div class="small">Por defecto es 60 minutos. Puedes cambiarlo antes de generar el QR.</div>
+
+          <div class="buttons">
+            <button class="btn-success" id="startNowBtn">Iniciar ahora</button>
+            <button class="btn-warn" id="resetBtn">Reiniciar sala</button>
+            <button class="btn-danger" id="finishBtn">Marcar como terminado</button>
+          </div>
+        </div>
+
+        <div class="card" id="linksPanel" style="margin-top:22px;">
+          <h2>Enlaces y QR</h2>
+          <div><strong>Enlace anfitrión</strong><code id="hostLink">Conecta una sala primero</code></div>
+          <div style="margin-top:14px;"><strong>Enlace QR / activación</strong><code id="qrLink">Conecta una sala primero</code></div>
+          <div style="margin-top:14px;"><strong>Enlace jugador</strong><code id="playerLink">Conecta una sala primero</code></div>
+          <div class="buttons">
+            <button class="btn-accent" id="generateQrBtn">Generar QR</button>
+          </div>
+          <div class="qr-box" id="qrBox" style="display:none;">
+            <img id="qrImage" alt="Código QR del temporizador" />
+            <div class="small">Imprime este QR o enséñalo en pantalla. Al escanearlo, arrancará la cuenta atrás si aún no ha empezado.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="timer-shell">
+          <div class="finish-banner" id="finishBanner">⏰ El tiempo ha terminado.</div>
+
+          <div class="timer-ring" id="timerRing" style="--progress: 100%;">
+            <div class="fuse"></div>
+            <div class="spark" id="spark"></div>
+            <div class="timer-core">
+              <div>
+                <div class="time" id="timeDisplay">60:00</div>
+                <div class="state" id="stateText">Esperando activación</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-box">
+              <div class="label">Sala</div>
+              <div class="value" id="roomValue">—</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Duración</div>
+              <div class="value" id="durationValue">60 min</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Estado</div>
+              <div class="value" id="statusValue">En espera</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dramatic-overlay" id="dramaticOverlay">
+    <div class="dramatic-card">
+      <h2>⏰ Se acabó el tiempo</h2>
+      <p>La cuenta atrás ha llegado a cero. Si esto forma parte del juego, aquí puedes enlazar la siguiente pista, la penalización final o el mensaje dramático que quieras mostrar.</p>
+      <div class="dramatic-code">“Demasiado tarde. La verdad ya estaba en marcha.”</div>
+      <div class="buttons" style="justify-content:center; margin-top:22px;">
+        <button class="btn-primary" id="closeOverlayBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbtBUg3Wf8kBZyXfOTqMjbMLzvKgCs714",
+      authDomain: "pasalacabra-b3c5c.firebaseapp.com",
+      projectId: "pasalacabra-b3c5c",
+      storageBucket: "pasalacabra-b3c5c.firebasestorage.app",
+      messagingSenderId: "291983918565",
+      appId: "1:291983918565:web:703b0585c4661a3e6b5b0c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode') === 'player' ? 'player' : 'host';
+    const autoStart = params.get('start') === '1';
+    const isHost = mode === 'host';
+    let roomId = (params.get('room') || '').trim().toUpperCase();
+    let unsubscribeRoom = null;
+    let tickInterval = null;
+    let roomState = null;
+    let startSoundPlayed = false;
+    let finishSoundPlayed = false;
+
+    const modePill = document.getElementById('modePill');
+    const subtitleText = document.getElementById('subtitleText');
+    const roomInput = document.getElementById('roomInput');
+    const durationInput = document.getElementById('durationInput');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const connectRoomBtn = document.getElementById('connectRoomBtn');
+    const startNowBtn = document.getElementById('startNowBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const generateQrBtn = document.getElementById('generateQrBtn');
+    const roomStatus = document.getElementById('roomStatus');
+    const hostLink = document.getElementById('hostLink');
+    const qrLink = document.getElementById('qrLink');
+    const playerLink = document.getElementById('playerLink');
+    const qrBox = document.getElementById('qrBox');
+    const qrImage = document.getElementById('qrImage');
+    const timerRing = document.getElementById('timerRing');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const stateText = document.getElementById('stateText');
+    const roomValue = document.getElementById('roomValue');
+    const durationValue = document.getElementById('durationValue');
+    const statusValue = document.getElementById('statusValue');
+    const finishBanner = document.getElementById('finishBanner');
+    const dramaticOverlay = document.getElementById('dramaticOverlay');
+    const closeOverlayBtn = document.getElementById('closeOverlayBtn');
+
+    function playTone(type) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+
+      function note(kind, freq, start, duration, gain = 0.12) {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = kind;
+        osc.frequency.setValueAtTime(freq, start);
+        gainNode.gain.setValueAtTime(0.0001, start);
+        gainNode.gain.exponentialRampToValueAtTime(gain, start + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.02);
+      }
+
+      if (type === 'start') {
+        note('triangle', 523.25, now, 0.12, 0.08);
+        note('triangle', 659.25, now + 0.12, 0.14, 0.08);
+        note('sine', 880, now + 0.26, 0.22, 0.09);
+      } else if (type === 'finish') {
+        note('sawtooth', 220, now, 0.20, 0.09);
+        note('sawtooth', 196, now + 0.18, 0.20, 0.09);
+        note('square', 164.81, now + 0.36, 0.42, 0.08);
+      }
+
+      setTimeout(() => ctx.close(), 1200);
+    }
+
+    function applyModeUI() {
+      if (!isHost) {
+        document.body.classList.add('player-mode');
+        modePill.textContent = autoStart ? 'Modo activación por QR' : 'Modo jugador';
+        subtitleText.textContent = autoStart
+          ? 'Esta página activará el temporizador automáticamente si la sala aún no ha empezado.'
+          : 'Vista limpia del temporizador. Perfecta para móvil, pantalla secundaria o para enseñarla durante el juego.';
+      } else {
+        modePill.textContent = 'Modo anfitrión';
+      }
+    }
+
+    function normalizeRoomId(value) {
+      return value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 30);
+    }
+
+    function roomRef() {
+      return doc(db, 'qrTimerRooms', roomId);
+    }
+
+    function formatMs(ms) {
+      const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) {
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updateLinks() {
+      if (!roomId) {
+        hostLink.textContent = 'Conecta una sala primero';
+        qrLink.textContent = 'Conecta una sala primero';
+        playerLink.textContent = 'Conecta una sala primero';
+        roomValue.textContent = '—';
+        qrBox.style.display = 'none';
+        return;
+      }
+
+      const base = new URL(window.location.href);
+      const hostUrl = new URL(base);
+      hostUrl.searchParams.set('room', roomId);
+      hostUrl.searchParams.delete('start');
+      hostUrl.searchParams.delete('mode');
+
+      const qrUrl = new URL(base);
+      qrUrl.searchParams.set('room', roomId);
+      qrUrl.searchParams.set('start', '1');
+      qrUrl.searchParams.set('mode', 'player');
+
+      const playerUrl = new URL(base);
+      playerUrl.searchParams.set('room', roomId);
+      playerUrl.searchParams.set('mode', 'player');
+      playerUrl.searchParams.delete('start');
+
+      hostLink.textContent = hostUrl.toString();
+      qrLink.textContent = qrUrl.toString();
+      playerLink.textContent = playerUrl.toString();
+      roomValue.textContent = roomId;
+    }
+
+    function renderQr() {
+      if (!roomId) {
+        qrBox.style.display = 'none';
+        return;
+      }
+      const data = encodeURIComponent(qrLink.textContent);
+      qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
+      qrBox.style.display = 'grid';
+    }
+
+    function showDramaticOverlay(show) {
+      dramaticOverlay.classList.toggle('show', show);
+    }
+
+    function handleTransitionSounds(prevStatus, nextStatus) {
+      if (nextStatus === 'running' && prevStatus !== 'running' && !startSoundPlayed) {
+        playTone('start');
+        startSoundPlayed = true;
+        finishSoundPlayed = false;
+      }
+      if (nextStatus === 'finished' && prevStatus !== 'finished' && !finishSoundPlayed) {
+        playTone('finish');
+        finishSoundPlayed = true;
+        showDramaticOverlay(true);
+      }
+      if (nextStatus === 'waiting') {
+        startSoundPlayed = false;
+        finishSoundPlayed = false;
+        showDramaticOverlay(false);
+      }
+    }
+
+    function renderState() {
+      if (!roomState) {
+        const initialMinutes = Number(durationInput.value) || 60;
+        timeDisplay.textContent = formatMs(initialMinutes * 60 * 1000);
+        stateText.textContent = 'Esperando activación';
+        statusValue.textContent = 'En espera';
+        durationValue.textContent = `${initialMinutes} min`;
+        timerRing.style.setProperty('--progress', '100%');
+        finishBanner.classList.remove('show');
+        timeDisplay.className = 'time';
+        timerRing.classList.remove('bomb-warn', 'bomb-danger');
+        return;
+      }
+
+      const durationMs = (roomState.durationMinutes || 60) * 60 * 1000;
+      durationValue.textContent = `${roomState.durationMinutes || 60} min`;
+
+      if (roomState.status === 'waiting') {
+        timeDisplay.textContent = formatMs(durationMs);
+        stateText.textContent = 'Esperando activación';
+        statusValue.textContent = 'En espera';
+        timerRing.style.setProperty('--progress', '100%');
+        finishBanner.classList.remove('show');
+        timeDisplay.className = 'time';
+        timerRing.classList.remove('bomb-warn', 'bomb-danger');
+        return;
+      }
+
+      if (roomState.status === 'finished') {
+        timeDisplay.textContent = '00:00';
+        stateText.textContent = 'Tiempo terminado';
+        statusValue.textContent = 'Finalizado';
+        timerRing.style.setProperty('--progress', '0%');
+        finishBanner.classList.add('show');
+        timeDisplay.className = 'time done';
+        timerRing.classList.remove('bomb-warn');
+        timerRing.classList.add('bomb-danger');
+        return;
+      }
+
+      const startedAt = roomState.startedAtMs || 0;
+      const endsAt = startedAt + durationMs;
+      const remaining = endsAt - Date.now();
+      const percent = Math.max(0, Math.min(100, (remaining / durationMs) * 100));
+      timerRing.style.setProperty('--progress', `${percent}%`);
+      timeDisplay.textContent = formatMs(remaining);
+      stateText.textContent = 'Cuenta atrás en marcha';
+      statusValue.textContent = 'Activo';
+      finishBanner.classList.remove('show');
+      timeDisplay.className = 'time';
+      timerRing.classList.remove('bomb-warn', 'bomb-danger');
+
+      const remainingSeconds = Math.ceil(Math.max(0, remaining) / 1000);
+      if (remainingSeconds <= 60) {
+        timeDisplay.classList.add('danger');
+        timerRing.classList.add('bomb-danger');
+      } else if (remainingSeconds <= 300) {
+        timeDisplay.classList.add('warn');
+        timerRing.classList.add('bomb-warn');
+      }
+
+      if (remaining <= 0 && roomState.status !== 'finished') {
+        finishRoomByClock();
+      }
+    }
+
+    async function finishRoomByClock() {
+      if (!roomId || !roomState || roomState.status === 'finished') return;
+      await setDoc(roomRef(), {
+        status: 'finished',
+        finishedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    function startTicker() {
+      clearInterval(tickInterval);
+      tickInterval = setInterval(renderState, 250);
+    }
+
+    async function createRoom() {
+      roomId = normalizeRoomId(roomInput.value) || 'TEMPORIZADOR01';
+      roomInput.value = roomId;
+      const durationMinutes = Math.max(1, Number(durationInput.value) || 60);
+      await setDoc(roomRef(), {
+        roomId,
+        durationMinutes,
+        status: 'waiting',
+        startedAtMs: null,
+        finishedAtMs: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      roomStatus.textContent = `Sala conectada: ${roomId}`;
+      updateLinks();
+      const nextUrl = isHost
+        ? `${window.location.pathname}?room=${encodeURIComponent(roomId)}`
+        : `${window.location.pathname}?mode=player&room=${encodeURIComponent(roomId)}`;
+      history.replaceState({}, '', nextUrl);
+      await connectRoom();
+    }
+
+    async function connectRoom() {
+      roomId = normalizeRoomId(roomInput.value || roomId);
+      if (!roomId) {
+        alert('Escribe un ID de sala.');
+        return;
+      }
+      roomInput.value = roomId;
+      if (unsubscribeRoom) unsubscribeRoom();
+      unsubscribeRoom = onSnapshot(roomRef(), async snapshot => {
+        if (!snapshot.exists()) {
+          roomStatus.textContent = 'La sala no existe todavía';
+          return;
+        }
+        const previousStatus = roomState?.status;
+        roomState = snapshot.data();
+        roomStatus.textContent = `Sala conectada: ${roomId}`;
+        updateLinks();
+        renderState();
+        handleTransitionSounds(previousStatus, roomState.status);
+
+        if (autoStart && roomState.status === 'waiting') {
+          await startTimerIfNeeded();
+        }
+      });
+      const nextUrl = isHost
+        ? `${window.location.pathname}?room=${encodeURIComponent(roomId)}`
+        : `${window.location.pathname}?mode=player&room=${encodeURIComponent(roomId)}${autoStart ? '&start=1' : ''}`;
+      history.replaceState({}, '', nextUrl);
+    }
+
+    async function startTimerIfNeeded() {
+      if (!roomId) return;
+      const snap = await getDoc(roomRef());
+      if (!snap.exists()) return;
+      const live = snap.data();
+      if (live.status !== 'waiting') return;
+      const durationMinutes = Math.max(1, live.durationMinutes || Number(durationInput.value) || 60);
+      await setDoc(roomRef(), {
+        status: 'running',
+        durationMinutes,
+        startedAtMs: Date.now(),
+        finishedAtMs: null,
+        startedByQr: autoStart,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function startNow() {
+      if (!roomId) {
+        alert('Crea o conecta una sala primero.');
+        return;
+      }
+      const durationMinutes = Math.max(1, Number(durationInput.value) || 60);
+      await setDoc(roomRef(), {
+        status: 'running',
+        durationMinutes,
+        startedAtMs: Date.now(),
+        finishedAtMs: null,
+        startedByQr: false,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function resetRoom() {
+      if (!roomId) {
+        alert('Conecta una sala primero.');
+        return;
+      }
+      const durationMinutes = Math.max(1, Number(durationInput.value) || 60);
+      await setDoc(roomRef(), {
+        status: 'waiting',
+        durationMinutes,
+        startedAtMs: null,
+        finishedAtMs: null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function finishNow() {
+      if (!roomId) {
+        alert('Conecta una sala primero.');
+        return;
+      }
+      await setDoc(roomRef(), {
+        status: 'finished',
+        finishedAtMs: Date.now(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    applyModeUI();
+    startTicker();
+    renderState();
+
+    if (roomId) {
+      roomInput.value = roomId;
+      connectRoom();
+    }
+
+    createRoomBtn.addEventListener('click', createRoom);
+    connectRoomBtn.addEventListener('click', connectRoom);
+    startNowBtn.addEventListener('click', startNow);
+    resetBtn.addEventListener('click', resetRoom);
+    finishBtn.addEventListener('click', finishNow);
+    generateQrBtn.addEventListener('click', renderQr);
+    closeOverlayBtn.addEventListener('click', () => showDramaticOverlay(false));
+  </script>
+</body>
+</html>
