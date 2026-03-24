@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Temporizador QR Firebase</title>
+  <title>Temporizador</title>
   <style>
     :root {
       --bg: #08111f;
@@ -394,7 +394,7 @@
   <div class="wrap">
     <div class="pill" id="modePill">Modo anfitrión</div>
     <h1>Temporizador QR · 1 hora</h1>
-    <div class="subtitle" id="subtitleText">Crea una sala, genera un enlace para QR y cuando alguien lo abra por primera vez se activará el temporizador de 60 minutos para todos los dispositivos conectados.</div>
+    <div class="subtitle" id="subtitleText">IMPOSTOR: Adivina la palabra que escondemos.</div>
 
     <div class="layout">
       <div>
@@ -573,8 +573,8 @@
         document.body.classList.add('player-mode');
         modePill.textContent = autoStart ? 'Modo activación por QR' : 'Modo jugador';
         subtitleText.textContent = autoStart
-          ? 'El tiempo corre. Tienes una hora para encontrar el regalo antes de que sea demasiado tarde.'
-          : 'El tiempo corre. Tienes una hora para encontrar el regalo antes de que sea demasiado tarde.';
+          ? 'El tiempo corre. Tienes una hora para encontrar el regalo antes de que sea demasiado tarde. IMPOSTOR: Adivina la palabra que escondemos.'
+          : 'El tiempo corre. Tienes una hora para encontrar el regalo antes de que sea demasiado tarde. IMPOSTOR: Adivina la palabra que escondemos.';
       } else {
         modePill.textContent = 'Modo anfitrión';
       }
